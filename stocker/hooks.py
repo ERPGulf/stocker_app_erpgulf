@@ -47,6 +47,9 @@ app_license = "mit"
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
+doctype_js = {
+    "Stock Reconciliation": "public/js/stock_reconciliation_custom.js"
+}
 
 # Svg Icons
 # ------------------
@@ -203,7 +206,12 @@ app_license = "mit"
 # ----------
 # before_job = ["stocker.utils.before_job"]
 # after_job = ["stocker.utils.after_job"]
+doc_events = {
+    "Employee": {
+        "on_update": "stocker.stocker.api.create_qr_code",
 
+    }
+}
 # User Data Protection
 # --------------------
 
