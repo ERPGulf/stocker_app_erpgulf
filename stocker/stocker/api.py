@@ -478,108 +478,95 @@ def list_items(item_group=None, last_updated_time=None, pos_profile = None):
         )
 
 
-
-
 def create_qr_code(doc, method):
+    """Create QR Code after inserting Sales Inv"""
 
-	"""Create QR Code after inserting Sales Inv
-	"""
-	# if QR Code field not present, do nothing
+    # If QR Code field not present, do nothing
+    if not hasattr(doc, 'custom_qr_code'):
+        return
 
-	if not hasattr(doc, 'custom_qr_code'):
-		return
+    fields = frappe.get_meta('Employee').fields
 
-	# # Don't create QR Code if it already exists
-	# qr_code = doc.get("qr_code")
-	# if qr_code and frappe.db.exists({"doctype": "File", "file_url": qr_code}):
-	# 	return
-	fields = frappe.get_meta('Employee').fields
+    for field in fields:
+        if field.fieldname == 'custom_qr_code' and field.fieldtype == 'Attach Image':
+            # Creating QR code for the Sales Invoice
+            ''' TLV conversion for
+            1. Seller's Name
+            2. VAT Number
+            3. Time Stamp
+            4. Invoice Amount
+            5. VAT Amount
+            '''
+            tlv_array = []
 
+            company_name = "Company: " + frappe.db.get_value('Company', doc.company, 'company_name')
+            if not company_name:
+                frappe.throw(_('Company name missing for {} in the company document'.format(doc.company)))
 
+            tag = bytes([1]).hex()
+            length = bytes([len(company_name.encode('utf-8'))]).hex()
+            value = company_name.encode('utf-8').hex()
+            tlv_array.append(''.join([tag, length, value]))
 
-	for field in fields:
-		if field.fieldname == 'custom_qr_code' and field.fieldtype == 'Attach Image':
-			# creating qr code for the Sales Invoice
-			''' TLV conversion for
-			1. Seller's Name
-			2. VAT Number
-			3. Time Stamp
-			4. Invoice Amount
-			5. VAT Amount
-			'''
-			tlv_array = []
-			# Sellers Name
+            user_name = "Employee_Code: " + str(doc.name)
+            if not user_name:
+                frappe.throw(_('Employee name missing for {} in the document'))
 
-			company_name = "Company: " + frappe.db.get_value('Company',doc.company,'company_name')
-			if not company_name:
-				frappe.throw(_('Company name missing for {} in the company document'.format(doc.company)))
+            tag = bytes([1]).hex()
+            length = bytes([len(user_name.encode('utf-8'))]).hex()
+            value = user_name.encode('utf-8').hex()
+            tlv_array.append(''.join([tag, length, value]))
 
-			tag = bytes([1]).hex()
-			length = bytes([len(company_name.encode('utf-8'))]).hex()
-			value = company_name.encode('utf-8').hex()
-			tlv_array.append(''.join([tag, length, value]))
+            full_name = "Full_Name: " + str(doc.first_name + "  " + doc.last_name)
+            tag = bytes([1]).hex()
+            length = bytes([len(full_name.encode('utf-8'))]).hex()
+            value = full_name.encode('utf-8').hex()
+            tlv_array.append(''.join([tag, length, value]))
 
-			user_name = "Employee_Code: " + str(doc.name)
-			if not user_name:
-				frappe.throw(_('Employee name missing for {} in the  document'))
+            full_name = "User_id: " + str(doc.user_id)
+            tag = bytes([1]).hex()
+            length = bytes([len(full_name.encode('utf-8'))]).hex()
+            value = full_name.encode('utf-8').hex()
+            tlv_array.append(''.join([tag, length, value]))
 
-			tag = bytes([1]).hex()
-			length = bytes([len(user_name.encode('utf-8'))]).hex()
-			value = user_name.encode('utf-8').hex()
-			tlv_array.append(''.join([tag, length, value]))
-
-			full_name = "Full_Name: " + str(doc.first_name + "  " + doc.last_name)
-			tag = bytes([1]).hex()
-			length = bytes([len(full_name.encode('utf-8'))]).hex()
-			value = full_name.encode('utf-8').hex()
-			tlv_array.append(''.join([tag, length, value]))
-
-			full_name = "User_id: " + str(doc.user_id)
-			tag = bytes([1]).hex()
-			length = bytes([len(full_name.encode('utf-8'))]).hex()
-			value = full_name.encode('utf-8').hex()
-			tlv_array.append(''.join([tag, length, value]))
-
-			api_url = "API: " +  frappe.utils.get_url() + "/api/"
-			if not api_url:
-				frappe.throw(_('API URL is missing for {} in the  document'))
-
-			tag = bytes([1]).hex()
-			length = bytes([len(api_url.encode('utf-8'))]).hex()
-			value = api_url.encode('utf-8').hex()
-			tlv_array.append(''.join([tag, length, value]))
+            api_url = "API: " + frappe.utils.get_host_name() + "/api/"
 
 
+            if not api_url:
+                frappe.throw(_('API URL is missing for {} in the document'))
 
-			tlv_buff = ''.join(tlv_array)
+            tag = bytes([1]).hex()
+            length = bytes([len(api_url.encode('utf-8'))]).hex()
+            value = api_url.encode('utf-8').hex()
+            tlv_array.append(''.join([tag, length, value]))
 
+            tlv_buff = ''.join(tlv_array)
 
-			base64_string = b64encode(bytes.fromhex(tlv_buff)).decode()
-
-			qr_image = io.BytesIO()
-			url = qr_create(base64_string, error='L')
-			url.png(qr_image, scale=2, quiet_zone=1)
-
-
-
-
-			filename = f"QR-CODE-{doc.name}.png".replace(os.path.sep, "__")
-			print(filename)
-			_file = frappe.get_doc({
-				"doctype": "File",
-				"file_name": filename,
-				"content": qr_image.getvalue(),
-				"is_private": 0
-			})
-
-			_file.save()
-
-			doc.db_set('custom_qr_code', _file.file_url)
-
-			doc.notify_update()
+            base64_string = b64encode(bytes.fromhex(tlv_buff)).decode()
 
 
-			break
+            qr_image = io.BytesIO()
+            url = qr_create(base64_string, error='L')
+            url.png(qr_image, scale=2, quiet_zone=1)
+
+            filename = f"QR-CODE-{doc.name}.png".replace(os.path.sep, "__")
+            print(filename)
+
+            _file = frappe.get_doc({
+                "doctype": "File",
+                "file_name": filename,
+                "content": qr_image.getvalue(),
+                "is_private": 0
+            })
+
+            _file.save()
+
+            doc.db_set('image', _file.file_url)
+            # doc.db_set('custom_qr_data', base64_string)
+
+            doc.notify_update()
+
+            break
 
 
 from frappe.model.mapper import get_mapped_doc
