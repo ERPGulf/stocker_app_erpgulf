@@ -491,11 +491,11 @@ def create_qr_code(doc, method):
         if field.fieldname == 'custom_qr_code' and field.fieldtype == 'Attach Image':
             # Creating QR code for the Sales Invoice
             ''' TLV conversion for
-            1. Seller's Name
-            2. VAT Number
-            3. Time Stamp
-            4. Invoice Amount
-            5. VAT Amount
+            1. Company name
+            2. Employee code
+            3. Full Name
+            4. User_ID
+            5. API URL
             '''
             tlv_array = []
 
@@ -530,10 +530,10 @@ def create_qr_code(doc, method):
             tlv_array.append(''.join([tag, length, value]))
 
             api_url = "API: " +  frappe.local.conf.host_name
-            frappe.msgprint(api_url)  # Correctly indented
+            # frappe.msgprint(api_url)  # Correctly indented
 
-            if not api_url:
-                frappe.throw(_('API URL is missing for {} in the document'))
+            # if not api_url:
+            #     frappe.throw(_('API URL is missing for {} in the document'))
 
             tag = bytes([1]).hex()
             length = bytes([len(api_url.encode('utf-8'))]).hex()
@@ -543,7 +543,7 @@ def create_qr_code(doc, method):
             tlv_buff = ''.join(tlv_array)
 
             base64_string = b64encode(bytes.fromhex(tlv_buff)).decode()
-            frappe.msgprint(base64_string)
+            # frappe.msgprint(base64_string)
 
 
             qr_image = io.BytesIO()
@@ -551,7 +551,7 @@ def create_qr_code(doc, method):
             url.png(qr_image, scale=2, quiet_zone=1)
 
             filename = f"QR-CODE-{doc.name}.png".replace(os.path.sep, "__")
-            print(filename)
+            # print(filename)
 
             _file = frappe.get_doc({
                 "doctype": "File",
