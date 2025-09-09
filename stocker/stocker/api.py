@@ -14,7 +14,7 @@ from base64 import b64encode
 import io
 import os
 from base64 import b64encode
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def warehouse_list(warehouse=None):
     """
     Returns a list of warehouses.
@@ -51,7 +51,7 @@ def warehouse_list(warehouse=None):
         )
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_items(barcode,warehouse):
     try:
         barcode_doc = frappe.get_value(
@@ -117,7 +117,7 @@ def get_items(barcode,warehouse):
 
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 
 def create_stock_entry(item_id, date_time, warehouse, barcode, uom, qty,employee,shelf=None):
     try:
@@ -168,7 +168,7 @@ def create_stock_entry(item_id, date_time, warehouse, barcode, uom, qty,employee
 
 from datetime import date
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def list_stock_entries(warehouse=None, item_code=None, today_only=False):
     """
     Returns a list of Warehouse Stock Log entries, optionally filtered by warehouse, item_code, and today's date.
@@ -220,7 +220,7 @@ def list_stock_entries(warehouse=None, item_code=None, today_only=False):
 
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def update_stock_entry(entry_id, warehouse=None, barcode=None, shelf=None, date=None, item_code=None, uom=None, qty=None):
     """
     Updates a Warehouse Stock Log entry by entry_id.
@@ -273,7 +273,7 @@ def update_stock_entry(entry_id, warehouse=None, barcode=None, shelf=None, date=
 
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def delete_stock_entry(entry_id):
     """
     Deletes a Warehouse Stock Log entry by entry_id.
@@ -297,7 +297,7 @@ def delete_stock_entry(entry_id):
 
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def list_items(item_group=None, last_updated_time=None, pos_profile = None):
 
 
@@ -530,7 +530,7 @@ def create_qr_code(doc, method):
             tlv_array.append(''.join([tag, length, value]))
 
             api_url = "API: " +  frappe.local.conf.host_name
-            # frappe.msgprint(api_url)  # Correctly indented
+
 
             # if not api_url:
             #     frappe.throw(_('API URL is missing for {} in the document'))
