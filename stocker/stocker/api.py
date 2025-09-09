@@ -529,8 +529,8 @@ def create_qr_code(doc, method):
             value = full_name.encode('utf-8').hex()
             tlv_array.append(''.join([tag, length, value]))
 
-            api_url = "API: " + frappe.utils.get_host_name() + "/api/"
-
+            api_url = "API: " +  frappe.local.conf.host_name
+            frappe.msgprint(api_url)  # Correctly indented
 
             if not api_url:
                 frappe.throw(_('API URL is missing for {} in the document'))
@@ -543,6 +543,7 @@ def create_qr_code(doc, method):
             tlv_buff = ''.join(tlv_array)
 
             base64_string = b64encode(bytes.fromhex(tlv_buff)).decode()
+            frappe.msgprint(base64_string)
 
 
             qr_image = io.BytesIO()
