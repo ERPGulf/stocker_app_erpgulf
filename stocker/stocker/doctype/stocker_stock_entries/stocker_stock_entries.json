@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "employee",
+  "branch",
   "warehouse",
   "barcode",
   "shelf",
@@ -57,12 +58,18 @@
    "fieldname": "employee",
    "fieldtype": "Data",
    "label": "Employee"
+  },
+  {
+   "fieldname": "branch",
+   "fieldtype": "Link",
+   "label": "Branch",
+   "options": "Cost Center"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-03 12:29:38.091013",
+ "modified": "2025-09-17 10:46:39.796598",
  "modified_by": "Administrator",
  "module": "Stocker",
  "name": "Stocker Stock Entries",

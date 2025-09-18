@@ -23,13 +23,14 @@ frappe.ui.form.on('Stock Reconciliation', {
                             callback(r) {
                                 if (r.message) {
                                     r.message.forEach(d => {
-                                        let row = frm.add_child("items");
+                                        let empty_row = frm.doc.items.find(i => !i.item_code);
+                                        let row = empty_row || frm.add_child("items");
                                         row.item_code = d.item_code;
                                         row.warehouse = d.warehouse;
                                         row.uom = d.uom;
                                         row.qty = d.qty;
                                         row.barcode = d.barcode;
-                                        row.shelf = d.shelf;
+                                        // row.shelf = d.shelf;
                                     });
                                     frm.refresh_field("items");
 

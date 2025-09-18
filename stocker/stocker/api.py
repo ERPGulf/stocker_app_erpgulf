@@ -14,6 +14,9 @@ from base64 import b64encode
 import io
 import os
 from base64 import b64encode
+
+from frappe.utils import cint
+
 @frappe.whitelist(allow_guest=True)
 def warehouse_list(warehouse=None):
     """
@@ -52,24 +55,35 @@ def warehouse_list(warehouse=None):
 
 
 @frappe.whitelist(allow_guest=True)
-def get_items(barcode,warehouse):
+def get_items(item_code=None, uom=None, barcode=None, warehouse=None):
     try:
-        barcode_doc = frappe.get_value(
-            "Item Barcode",
-            {"barcode": barcode},
-            ["parent", "uom"],
-            as_dict=True
-        )
 
-        if not barcode_doc:
+        if barcode:
+            barcode_doc = frappe.get_value(
+                "Item Barcode",
+                {"barcode": barcode},
+                ["parent", "uom"],
+                as_dict=True
+            )
+
+            if not barcode_doc:
+                return Response(
+                    json.dumps({"error": "No item found for given barcode"}),
+                    status=404,
+                    mimetype="application/json"
+                )
+
+            item_code = barcode_doc.parent
+            uom = barcode_doc.uom
+
+
+        if not item_code or not uom:
             return Response(
-                json.dumps({"error": "No item found for given barcode"}),
-                status=404,
+                json.dumps({"error": "Either barcode or item_code & uom must be provided"}),
+                status=400,
                 mimetype="application/json"
             )
 
-        item_code = barcode_doc.parent
-        uom = barcode_doc.uom
 
         item = frappe.get_value(
             "Item",
@@ -78,27 +92,26 @@ def get_items(barcode,warehouse):
             as_dict=True
         )
 
+        if not item:
+            return Response(
+                json.dumps({"error": "Item not found with given item_code"}),
+                status=404,
+                mimetype="application/json"
+            )
+
 
         total_qty = frappe.db.sql("""
-        SELECT COALESCE(SUM(actual_qty), 0)
-        FROM `tabBin`
-        WHERE item_code = %s AND warehouse = %s
-    """, (item_code, warehouse))[0][0]
-
-
-        # shelf_data = frappe.db.sql("""
-        #     SELECT shelf, SUM(actual_qty) as qty
-        #     FROM `tabStock Ledger Entry`
-        #     WHERE item_code = %s
-        #     GROUP BY shelf
-        # """, (item_code,), as_dict=True)
+            SELECT COALESCE(SUM(actual_qty), 0)
+            FROM `tabBin`
+            WHERE item_code = %s AND warehouse = %s
+        """, (item_code, warehouse))[0][0]
 
         result = {
             "item_id": item.name,
             "item_name": item.item_name,
             "uom": uom,
             "total_qty": total_qty,
-            "shelf_qty":total_qty
+            "shelf_qty": total_qty
         }
 
         return Response(
@@ -108,7 +121,7 @@ def get_items(barcode,warehouse):
         )
 
     except Exception as e:
-        frappe.log_error(frappe.get_traceback(), "get_items (barcode) API Error")
+        frappe.log_error(frappe.get_traceback(), "get_items API Error")
         return Response(
             json.dumps({"error": str(e) or "Unknown error"}),
             status=500,
@@ -119,12 +132,35 @@ def get_items(barcode,warehouse):
 
 @frappe.whitelist(allow_guest=True)
 
-def create_stock_entry(item_id, date_time, warehouse, barcode, uom, qty,employee,shelf=None):
+def create_stock_entry(item_id, date_time, warehouse, uom, qty,employee,branch,barcode=None,shelf=None):
+
+
     try:
+        from frappe.utils import getdate
+        date_only = getdate(date_time)
+
+        exists = frappe.db.sql("""
+            SELECT name FROM `tabStocker Stock Entries`
+            WHERE item_code=%s
+              AND warehouse=%s
+              AND DATE(`date`)=%s
+            LIMIT 1
+        """, (item_id, warehouse, date_only))
+        if exists:
+            return Response(
+                json.dumps({
+                    "status": "error",
+                    "message": f"Item {item_id} already added for {warehouse} on {date_time}"
+                }),
+                status=409,
+                mimetype="application/json"
+            )
+
         doc = frappe.get_doc({
             "doctype": "Stocker Stock Entries",
             "warehouse": warehouse,
             "barcode": barcode,
+            "branch":branch,
             "shelf": shelf,
             "date": date_time,
             "item_code": item_id,
@@ -146,7 +182,8 @@ def create_stock_entry(item_id, date_time, warehouse, barcode, uom, qty,employee
             "uom": doc.uom,
             "qty": doc.qty,
             "date": doc.date,
-            "employee":doc.employee
+            "employee":doc.employee,
+            "branch":doc.branch
         }
         return Response(
                 json.dumps({"data":data}),
@@ -481,7 +518,7 @@ def list_items(item_group=None, last_updated_time=None, pos_profile = None):
 def create_qr_code(doc, method):
     """Create QR Code after inserting Sales Inv"""
 
-    # If QR Code field not present, do nothing
+
     if not hasattr(doc, 'custom_qr_code'):
         return
 
@@ -489,13 +526,14 @@ def create_qr_code(doc, method):
 
     for field in fields:
         if field.fieldname == 'custom_qr_code' and field.fieldtype == 'Attach Image':
-            # Creating QR code for the Sales Invoice
+
             ''' TLV conversion for
             1. Company name
             2. Employee code
             3. Full Name
             4. User_ID
             5. API URL
+            6. Payroll Cost Center
             '''
             tlv_array = []
 
@@ -532,18 +570,24 @@ def create_qr_code(doc, method):
             api_url = "API: " +  frappe.local.conf.host_name
 
 
-            # if not api_url:
-            #     frappe.throw(_('API URL is missing for {} in the document'))
 
             tag = bytes([1]).hex()
             length = bytes([len(api_url.encode('utf-8'))]).hex()
             value = api_url.encode('utf-8').hex()
             tlv_array.append(''.join([tag, length, value]))
 
+            cost_center = "Payroll_Cost_Center: " + str(doc.payroll_cost_center)
+            tag = bytes([1]).hex()
+            # llength = format(len(cost_center.encode('utf-8')), '02x')
+            value = cost_center.encode('utf-8').hex()
+            tlv_array.append(''.join([tag, length, value]))
+
             tlv_buff = ''.join(tlv_array)
 
             base64_string = b64encode(bytes.fromhex(tlv_buff)).decode()
-            # frappe.msgprint(base64_string)
+            frappe.msgprint(base64_string)
+
+
 
 
             qr_image = io.BytesIO()
@@ -551,7 +595,7 @@ def create_qr_code(doc, method):
             url.png(qr_image, scale=2, quiet_zone=1)
 
             filename = f"QR-CODE-{doc.name}.png".replace(os.path.sep, "__")
-            # print(filename)
+
 
             _file = frappe.get_doc({
                 "doctype": "File",
@@ -563,7 +607,7 @@ def create_qr_code(doc, method):
             _file.save()
 
             doc.db_set('image', _file.file_url)
-            # doc.db_set('custom_qr_data', base64_string)
+
 
             doc.notify_update()
 
@@ -607,3 +651,54 @@ def make_stock_entry(source_name, filters=None):
             })
 
     return items
+
+
+@frappe.whitelist(allow_guest=True)
+def get_item_uom(item_code):
+    try:
+
+        doc = frappe.get_doc("Item", item_code)
+
+
+        uom_list = [uom.uom for uom in doc.uoms]
+        return Response(
+            json.dumps({"data": uom_list}),
+            status=200,
+            mimetype="application/json"
+        )
+
+    except Exception as e:
+        return Response(
+            json.dumps({"data": e}),
+            status=500,
+            mimetype="application/json"
+        )
+
+
+@frappe.whitelist(allow_guest=True)
+def list_items_new(item_code=None, limit=None, offset=0):
+    try:
+        filters = {}
+        if item_code:
+            filters = {"name": ["like", f"{item_code}%"]}
+
+        items = frappe.get_all(
+            "Item",
+            fields=["name", "item_name", "item_group"],
+            filters=filters,
+            limit_page_length=limit,
+            limit_start=offset
+        )
+
+        return Response(
+            json.dumps({"data": items}),
+            status=200,
+            mimetype="application/json"
+        )
+    except Exception as e:
+        return Response(
+            json.dumps({"error": str(e)}),
+            status=500,
+            mimetype="application/json"
+        )
+
