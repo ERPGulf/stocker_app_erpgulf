@@ -17,6 +17,10 @@ doc_events = {
 
     }
 }
+
+fixtures = [
+    {"dt": "Custom Field", "filters": {"module": "Stocker"}},
+]
 # User Data Protection
 # --------------------
 

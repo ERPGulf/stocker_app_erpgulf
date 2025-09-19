@@ -575,8 +575,8 @@ def create_qr_code(doc, method):
             length = bytes([len(api_url.encode('utf-8'))]).hex()
             value = api_url.encode('utf-8').hex()
             tlv_array.append(''.join([tag, length, value]))
-            if doc.payroll_cost_center:
-                cost_center = "Payroll_Cost_Center: " + str(doc.payroll_cost_center)
+            if doc.custom_stocker_branch:
+                cost_center = "Payroll_Cost_Center: " + str(doc.custom_stocker_branch)
                 tag = bytes([1]).hex()
                 # llength = format(len(cost_center.encode('utf-8')), '02x')
                 value = cost_center.encode('utf-8').hex()
