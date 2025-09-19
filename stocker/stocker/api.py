@@ -132,29 +132,29 @@ def get_items(item_code=None, uom=None, barcode=None, warehouse=None):
 
 @frappe.whitelist(allow_guest=True)
 
-def create_stock_entry(item_id, date_time, warehouse, uom, qty,employee,branch,barcode=None,shelf=None):
+def create_stock_entry(item_id, date_time, warehouse, uom, qty,employee,branch=None,barcode=None,shelf=None):
 
 
     try:
         from frappe.utils import getdate
         date_only = getdate(date_time)
 
-        exists = frappe.db.sql("""
-            SELECT name FROM `tabStocker Stock Entries`
-            WHERE item_code=%s
-              AND warehouse=%s
-              AND DATE(`date`)=%s
-            LIMIT 1
-        """, (item_id, warehouse, date_only))
-        if exists:
-            return Response(
-                json.dumps({
-                    "status": "error",
-                    "message": f"Item {item_id} already added for {warehouse} on {date_time}"
-                }),
-                status=409,
-                mimetype="application/json"
-            )
+        # exists = frappe.db.sql("""
+        #     SELECT name FROM `tabStocker Stock Entries`
+        #     WHERE item_code=%s
+        #       AND warehouse=%s
+        #       AND DATE(`date`)=%s
+        #     LIMIT 1
+        # """, (item_id, warehouse, date_only))
+        # if exists:
+        #     return Response(
+        #         json.dumps({
+        #             "status": "error",
+        #             "message": f"Item {item_id} already added for {warehouse} on {date_time}"
+        #         }),
+        #         status=409,
+        #         mimetype="application/json"
+            # )
 
         doc = frappe.get_doc({
             "doctype": "Stocker Stock Entries",
@@ -575,17 +575,19 @@ def create_qr_code(doc, method):
             length = bytes([len(api_url.encode('utf-8'))]).hex()
             value = api_url.encode('utf-8').hex()
             tlv_array.append(''.join([tag, length, value]))
-
-            cost_center = "Payroll_Cost_Center: " + str(doc.payroll_cost_center)
-            tag = bytes([1]).hex()
-            # llength = format(len(cost_center.encode('utf-8')), '02x')
-            value = cost_center.encode('utf-8').hex()
-            tlv_array.append(''.join([tag, length, value]))
+            if doc.payroll_cost_center:
+                cost_center = "Payroll_Cost_Center: " + str(doc.payroll_cost_center)
+                tag = bytes([1]).hex()
+                # llength = format(len(cost_center.encode('utf-8')), '02x')
+                value = cost_center.encode('utf-8').hex()
+                tlv_array.append(''.join([tag, length, value]))
 
             tlv_buff = ''.join(tlv_array)
 
             base64_string = b64encode(bytes.fromhex(tlv_buff)).decode()
-            frappe.msgprint(base64_string)
+
+
+
 
 
 
@@ -674,18 +676,24 @@ def get_item_uom(item_code):
             mimetype="application/json"
         )
 
-
 @frappe.whitelist(allow_guest=True)
-def list_items_new(item_code=None, limit=None, offset=0):
+def list_items_search(item=None, limit=None, offset=0):
     try:
         filters = {}
-        if item_code:
-            filters = {"name": ["like", f"{item_code}%"]}
+        or_filters = {}
+
+        if item:
+
+            or_filters = {
+                "name": ["like", f"{item}%"],
+                "item_name": ["like", f"{item}%"]
+            }
 
         items = frappe.get_all(
             "Item",
-            fields=["name", "item_name", "item_group"],
+            fields=["item_code", "item_name", "item_group"],
             filters=filters,
+            or_filters=or_filters,
             limit_page_length=limit,
             limit_start=offset
         )
@@ -701,4 +709,3 @@ def list_items_new(item_code=None, limit=None, offset=0):
             status=500,
             mimetype="application/json"
         )
-
