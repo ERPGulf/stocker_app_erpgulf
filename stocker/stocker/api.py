@@ -685,8 +685,8 @@ def list_items_search(item=None, limit=None, offset=0):
         if item:
 
             or_filters = {
-                "name": ["like", f"{item}%"],
-                "item_name": ["like", f"{item}%"]
+                "name": ["like", f"%{item}%"],
+                "item_name": ["like", f"%{item}%"]
             }
 
         items = frappe.get_all(
