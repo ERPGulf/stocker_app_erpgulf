@@ -18,28 +18,23 @@ from base64 import b64encode
 from frappe.utils import cint
 
 @frappe.whitelist(allow_guest=True)
-def warehouse_list(warehouse=None):
+def warehouse_list(employee_code=None):
     """
     Returns a list of warehouses.
     """
     try:
-        if warehouse:
-            warehouse_list = frappe.get_all(
-                "Warehouse",
-                fields=[
-                    "name as warehouse_id",
-                    "warehouse_name",
-                ],
-                filters={"name": warehouse},
-            )
-        else:
-            warehouse_list = frappe.get_all(
-                "Warehouse",
-                fields=[
-                    "name as warehouse_id",
-                    "warehouse_name"
-                ],
-            )
+
+        employee_doc=frappe.get_doc("Employee",employee_code)
+        warehouse_name=employee_doc.custom_stocker_warehouse
+        warehouse_list = frappe.get_all(
+            "Warehouse",
+            fields=[
+                "name as warehouse_id",
+                "warehouse_name",
+            ],
+            filters={"name": warehouse_name},
+        )
+
 
         return Response(
             json.dumps({"data": warehouse_list}),
@@ -581,6 +576,7 @@ def create_qr_code(doc, method):
                 # llength = format(len(cost_center.encode('utf-8')), '02x')
                 value = cost_center.encode('utf-8').hex()
                 tlv_array.append(''.join([tag, length, value]))
+
 
             tlv_buff = ''.join(tlv_array)
 
