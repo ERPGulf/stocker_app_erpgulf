@@ -11,12 +11,12 @@ doctype_js = {
 }
 
 
-doc_events = {
-    "Employee": {
-        "on_update": "stocker.stocker.api.create_qr_code",
+# doc_events = {
+#     "Employee": {
+#         "on_update": "stocker.stocker.api.create_qr_code",
 
-    }
-}
+#     }
+# }
 
 fixtures = [
     {"dt": "Custom Field", "filters": {"module": "Stocker"}},

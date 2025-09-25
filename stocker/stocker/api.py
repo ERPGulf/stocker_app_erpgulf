@@ -14,7 +14,9 @@ from base64 import b64encode
 import io
 import os
 from base64 import b64encode
+from frappe.model.mapper import get_mapped_doc
 
+from frappe.utils import flt
 from frappe.utils import cint
 
 @frappe.whitelist(allow_guest=True)
@@ -126,48 +128,63 @@ def get_items(item_code=None, uom=None, barcode=None, warehouse=None):
 
 
 @frappe.whitelist(allow_guest=True)
-
-def create_stock_entry(item_id, date_time, warehouse, uom, qty,employee,branch=None,barcode=None,shelf=None):
-
-
+def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch=None, barcode=None, shelf=None):
     try:
-        from frappe.utils import getdate
-        date_only = getdate(date_time)
+        from frappe.utils import getdate, flt
 
-        # exists = frappe.db.sql("""
-        #     SELECT name FROM `tabStocker Stock Entries`
-        #     WHERE item_code=%s
-        #       AND warehouse=%s
-        #       AND DATE(`date`)=%s
-        #     LIMIT 1
-        # """, (item_id, warehouse, date_only))
-        # if exists:
-        #     return Response(
-        #         json.dumps({
-        #             "status": "error",
-        #             "message": f"Item {item_id} already added for {warehouse} on {date_time}"
-        #         }),
-        #         status=409,
-        #         mimetype="application/json"
-            # )
+        item_code = frappe.db.get_value("Item", {"item_name": item_id}, "name")
+        if not item_code:
+            return Response(
+                json.dumps({
+                    "status": "error",
+                    "message": f"Item with name '{item_id}' does not exist."
+                }),
+                status=404,
+                mimetype="application/json"
+            )
+
+        date_only = getdate(date_time)
+        uom1, qty1 = normalize_to_default_uom(item_code, uom, qty)
+        last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
+        setting_doc=frappe.get_doc("Stocker Stock Setting")
+        live_reconciliation=setting_doc.live__reconciliation
+        items = [
+            {
+                "item_code": item_code,
+                "qty": qty1,
+                "warehouse": warehouse,
+                "valuation_rate": flt(last_purchase_rate) if last_purchase_rate else 0,
+                "barcode": barcode,
+                "shelf": shelf
+            }
+        ]
 
         doc = frappe.get_doc({
             "doctype": "Stocker Stock Entries",
             "warehouse": warehouse,
             "barcode": barcode,
-            "branch":branch,
+            "branch": branch,
             "shelf": shelf,
             "date": date_time,
-            "item_code": item_id,
+            "item_code": item_code,
             "uom": uom,
             "qty": qty,
-            "employee":employee
+            "employee": employee
         })
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
+        if live_reconciliation == 1:
+            Reconciliation_doc = frappe.get_doc({
+                    "doctype": "Stock Reconciliation",
+                    "purpose": "Stock Reconciliation",
+                    "cost_center": branch,
+                    "items": items
+                })
+            Reconciliation_doc.insert(ignore_permissions=True)
+                # frappe.db.commit()
+                # Reconciliation_doc.submit()
 
-
-        data={
+        data = {
             "status": "success",
             "id": doc.name,
             "item_code": doc.item_code,
@@ -177,23 +194,22 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty,employee,branch=N
             "uom": doc.uom,
             "qty": doc.qty,
             "date": doc.date,
-            "employee":doc.employee,
-            "branch":doc.branch
+            "employee": doc.employee,
+            "branch": doc.branch
         }
         return Response(
-                json.dumps({"data":data}),
-                status=200,
-                mimetype="application/json"
-            )
+            json.dumps({"data": data}),
+            status=200,
+            mimetype="application/json"
+        )
 
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "create_stock_entry Error")
         return Response(
-                    json.dumps({e}),
-                    status=500,
-                    mimetype="application/json"
-                )
-
+            json.dumps({"error": str(e)}),
+            status=500,
+            mimetype="application/json"
+        )
 
 
 
@@ -584,10 +600,6 @@ def create_qr_code(doc, method):
 
 
 
-
-
-
-
             qr_image = io.BytesIO()
             url = qr_create(base64_string, error='L')
             url.png(qr_image, scale=2, quiet_zone=1)
@@ -612,10 +624,33 @@ def create_qr_code(doc, method):
             break
 
 
-from frappe.model.mapper import get_mapped_doc
 
 
-@frappe.whitelist()
+def normalize_to_default_uom(item_code, uom, qty):
+    qty = flt(qty)
+
+    default_uom = frappe.db.get_value("Item", item_code, "stock_uom")
+    if not default_uom or not uom or uom == default_uom:
+        return uom, qty
+
+
+    conversion_factor = frappe.db.get_value(
+        "UOM Conversion Detail",
+        {"parent": item_code, "uom": uom},
+        "conversion_factor"
+    )
+
+    if not conversion_factor:
+        frappe.throw(
+            f"Conversion factor for UOM {uom} not defined for Item {item_code}"
+        )
+
+
+    new_qty = qty * flt(conversion_factor)
+    return default_uom, new_qty
+
+
+@frappe.whitelist(allow_guest=True)
 def make_stock_entry(source_name, filters=None):
     import json
 
@@ -627,7 +662,6 @@ def make_stock_entry(source_name, filters=None):
 
     items = []
 
-
     if filters:
         docs = frappe.get_list(
             "Stocker Stock Entries",
@@ -635,20 +669,27 @@ def make_stock_entry(source_name, filters=None):
             fields=["name", "item_code", "warehouse", "uom", "qty", "barcode", "shelf"]
         )
         for d in docs:
+            d.uom, d.qty = normalize_to_default_uom(d.item_code, d.uom, d.qty)
+            last_purchase_rate = frappe.db.get_value("Item", d.item_code, "last_purchase_rate")
+            d.last_purchase_rate = flt(last_purchase_rate) if last_purchase_rate else 0
             items.append(d)
     else:
         for name in source_name:
             doc = frappe.get_doc("Stocker Stock Entries", name)
+            uom, qty = normalize_to_default_uom(doc.item_code, doc.uom, doc.qty)
+            last_purchase_rate = frappe.db.get_value("Item", doc.item_code, "last_purchase_rate")
             items.append({
                 "item_code": doc.item_code,
                 "warehouse": doc.warehouse,
-                "uom": doc.uom,
-                "qty": doc.qty,
+                "uom": uom,
+                "qty": qty,
                 "barcode": getattr(doc, "barcode", None),
                 "shelf": getattr(doc, "shelf", None),
+                "valuation_rate": flt(last_purchase_rate) if last_purchase_rate else 0,
             })
 
     return items
+
 
 
 @frappe.whitelist(allow_guest=True)

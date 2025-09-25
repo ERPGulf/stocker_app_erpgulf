@@ -5,7 +5,12 @@ frappe.ui.form.on('Stock Reconciliation', {
                 doctype: "Stocker Stock Entries",
                 target: frm,
                 setters: {
-                    warehouse: frm.doc.set_warehouse || undefined
+                    warehouse: frm.doc.set_warehouse || undefined,
+                    employee:frm.doc.employee ||undefined,
+                    branch :frm.doc.cost_center || undefined,
+                    date :frm.doc.posting_date || undefined,
+                    shelf: frm.doc.shelf ||undefined
+
                 },
                 add_filters_group: 1,
                 get_query() {
@@ -30,7 +35,9 @@ frappe.ui.form.on('Stock Reconciliation', {
                                         row.uom = d.uom;
                                         row.qty = d.qty;
                                         row.barcode = d.barcode;
-                                        // row.shelf = d.shelf;
+                                        row.shelf = d.shelf;
+                                        row.valuation_rate = d.valuation_rate;
+
                                     });
                                     frm.refresh_field("items");
 

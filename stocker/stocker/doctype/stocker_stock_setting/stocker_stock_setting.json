@@ -5,19 +5,21 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_hdjl"
+  "live__reconciliation"
  ],
  "fields": [
   {
-   "fieldname": "section_break_hdjl",
-   "fieldtype": "Section Break"
+   "default": "0",
+   "fieldname": "live__reconciliation",
+   "fieldtype": "Check",
+   "label": "Live  Reconciliation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-08 11:26:08.951920",
+ "modified": "2025-09-24 12:55:04.989961",
  "modified_by": "Administrator",
  "module": "Stocker",
  "name": "Stocker Stock Setting",
