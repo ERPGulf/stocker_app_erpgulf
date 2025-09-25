@@ -132,7 +132,7 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
     try:
         from frappe.utils import getdate, flt
 
-        item_code = frappe.db.get_value("Item", {"item_name": item_id}, "name")
+        item_code = frappe.db.get_value("Item", {"name": item_id}, "name")
         if not item_code:
             return Response(
                 json.dumps({
