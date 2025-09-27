@@ -13,7 +13,9 @@
   "date",
   "item_code",
   "uom",
-  "qty"
+  "qty",
+  "column_break_bkqo",
+  "stock_reconciliation"
  ],
  "fields": [
   {
@@ -56,20 +58,31 @@
   },
   {
    "fieldname": "employee",
-   "fieldtype": "Data",
-   "label": "Employee"
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
   },
   {
    "fieldname": "branch",
    "fieldtype": "Link",
    "label": "Branch",
    "options": "Cost Center"
+  },
+  {
+   "fieldname": "column_break_bkqo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "stock_reconciliation",
+   "fieldtype": "Check",
+   "label": "Stock Reconciliation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-17 10:46:39.796598",
+ "modified": "2025-09-26 09:51:38.033077",
  "modified_by": "Administrator",
  "module": "Stocker",
  "name": "Stocker Stock Entries",

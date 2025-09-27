@@ -7,15 +7,18 @@ frappe.ui.form.on('Stock Reconciliation', {
                 setters: {
                     warehouse: frm.doc.set_warehouse || undefined,
                     employee:frm.doc.employee ||undefined,
-                    branch :frm.doc.cost_center || undefined,
-                    date :frm.doc.posting_date || undefined,
-                    shelf: frm.doc.shelf ||undefined
+                    branch :frm.doc.branch || undefined,
+                    date :frm.doc.date || undefined,
+                    shelf: frm.doc.shelf ||undefined,
+                    item_code: frm.doc.item_code|| undefined
 
                 },
                 add_filters_group: 1,
                 get_query() {
                     return {
-                        filters: {}
+                        filters: {
+                            stock_reconciliation: 0
+                        }
                     };
                 },
                 action(selections) {
@@ -37,6 +40,7 @@ frappe.ui.form.on('Stock Reconciliation', {
                                         row.barcode = d.barcode;
                                         row.shelf = d.shelf;
                                         row.valuation_rate = d.valuation_rate;
+                                        row.custom_stocker_id = d.custom_stocker_id;
 
                                     });
                                     frm.refresh_field("items");
@@ -51,3 +55,5 @@ frappe.ui.form.on('Stock Reconciliation', {
         }, __("Get Items From"));
     }
 });
+
+

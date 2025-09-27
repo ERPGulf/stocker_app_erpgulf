@@ -11,15 +11,22 @@ doctype_js = {
 }
 
 
-# doc_events = {
-#     "Employee": {
-#         "on_update": "stocker.stocker.api.create_qr_code",
+doc_events = {
+    # "Employee": {
+    #     "on_update": "stocker.stocker.api.create_qr_code",}
+    "Stock Reconciliation": {
+        "on_submit": "stocker.stocker.api.on_submit"
+    }
+}
 
-#     }
-# }
+
 
 fixtures = [
     {"dt": "Custom Field", "filters": {"module": "Stocker"}},
+    {
+        "dt": "Client Script",
+        "filters": {"module": "Stocker"},
+    },
 ]
 # User Data Protection
 # --------------------
