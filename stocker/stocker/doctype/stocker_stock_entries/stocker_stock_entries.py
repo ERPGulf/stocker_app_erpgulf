@@ -72,6 +72,7 @@ def create_stock_reconciliation(entries):
             "naming_series":"STK-.YY..MM.-",
             "posting_date": data["date"],
             "posting_time": data["time"],
+            "set_warehouse": data["warehouse"],
             "set_posting_time": 1,
             "items": [{
                 "item_code": data["item_code"],
@@ -82,12 +83,26 @@ def create_stock_reconciliation(entries):
             }]
         })
 
-        recon_doc.insert(ignore_permissions=True)
-        recon_doc.submit()
-        created_reconciliations.append(recon_doc.name)
+        try:
+            recon_doc.insert(ignore_permissions=True)
+            recon_doc.submit()
+            created_reconciliations.append(recon_doc.name)
 
-        for se_name in data["custom_stocker_ids"]:
-            frappe.db.set_value("Stocker Stock Entries", se_name, "stock_reconciliation", 1)
+            for se_name in data["custom_stocker_ids"]:
+                frappe.db.set_value("Stocker Stock Entries", se_name, "stock_reconciliation", 1)
+
+        except Exception as e:
+            err_msg = str(e)
+
+            if "None of the items have any change in quantity or value" in err_msg:
+                frappe.log_error(
+                    f"Skipping reconciliation for {data['item_code']} in {data['warehouse']}: {err_msg}",
+                    "Stock Reconciliation"
+                )
+                continue
+            else:
+
+                raise
 
     return ", ".join(created_reconciliations)
 

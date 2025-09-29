@@ -892,6 +892,7 @@ def create_stock_reconciliation_doc(entries):
             "naming_series":"STK-.YY..MM.-",
             "posting_date": date_only,
             "posting_time": time_only,
+            "set_warehouse": data["warehouse"],
             "set_posting_time": 1,
             "items": [{
                 "item_code": item_code,
