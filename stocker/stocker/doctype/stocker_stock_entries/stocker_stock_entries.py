@@ -69,6 +69,7 @@ def create_stock_reconciliation(entries):
         recon_doc = frappe.get_doc({
             "doctype": "Stock Reconciliation",
             "purpose": "Stock Reconciliation",
+            "naming_series":"STK-.YY..MM.-",
             "posting_date": data["date"],
             "posting_time": data["time"],
             "set_posting_time": 1,
