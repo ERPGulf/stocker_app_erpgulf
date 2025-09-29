@@ -12,11 +12,11 @@ doctype_js = {
 
 
 doc_events = {
-    # "Employee": {
-    #     "on_update": "stocker.stocker.api.create_qr_code",}
-    "Stock Reconciliation": {
-        "on_submit": "stocker.stocker.api.on_submit"
-    }
+    "Employee": {
+        "on_update": "stocker.stocker.api.create_qr_code",}
+    # "Stock Reconciliation": {
+    #     "on_submit": "stocker.stocker.api.on_submit"
+    # }
 }
 
 
