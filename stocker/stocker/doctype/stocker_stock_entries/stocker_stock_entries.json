@@ -14,6 +14,7 @@
   "item_code",
   "uom",
   "qty",
+  "valuation_rate",
   "column_break_bkqo",
   "stock_reconciliation"
  ],
@@ -77,12 +78,17 @@
    "fieldname": "stock_reconciliation",
    "fieldtype": "Check",
    "label": "Stock Reconciliation"
+  },
+  {
+   "fieldname": "valuation_rate",
+   "fieldtype": "Float",
+   "label": "Valuation Rate"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-26 09:51:38.033077",
+ "modified": "2025-09-29 08:40:02.994295",
  "modified_by": "Administrator",
  "module": "Stocker",
  "name": "Stocker Stock Entries",

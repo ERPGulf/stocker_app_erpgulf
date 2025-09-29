@@ -843,48 +843,67 @@ def on_submit(doc, method):
                     1
                 )
 
-@frappe.whitelist()
 
-def create_stock_reconciliation(entries):
+@frappe.whitelist()
+def create_stock_reconciliation_doc(entries):
+
 
     entries = json.loads(entries)
-
     created_reconciliations = []
+
     for entry in entries:
         if isinstance(entry, dict):
             entry = entry.get("name")
 
         se_doc = frappe.get_doc("Stocker Stock Entries", entry)
-        item_code = frappe.db.get_value("Item", {"name": se_doc.name}, "name")
+        item_code = se_doc.item_code
         date_only = getdate(se_doc.date)
         time_only = get_time(se_doc.date)
+
+
         bin_val_rate = frappe.db.get_value(
-        "Bin",
-        {"item_code": item_code, "warehouse": se_doc.warehouse},
-        "valuation_rate")
+            "Bin",
+            {"item_code": item_code, "warehouse": se_doc.warehouse},
+            "valuation_rate"
+        )
 
 
-        uom1, qty1 = normalize_to_default_uom(item_code,se_doc.uom, se_doc.qty)
+        last_purchase_rate = None
         if not bin_val_rate:
             last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
+
+        final_rate = flt(bin_val_rate) or flt(last_purchase_rate) or flt(se_doc.valuation_rate)
+
+
+        if not final_rate:
+            frappe.throw(
+                f"No valuation rate found for Item {item_code} in warehouse {se_doc.warehouse} "
+                f"and Stock Entry {se_doc.name}."
+            )
+
+
+        uom1, qty1 = normalize_to_default_uom(item_code, se_doc.uom, se_doc.qty)
+
 
         recon_doc = frappe.get_doc({
             "doctype": "Stock Reconciliation",
             "purpose": "Stock Reconciliation",
             "posting_date": date_only,
             "posting_time": time_only,
-            "set_posting_time":1,
+            "set_posting_time": 1,
             "items": [{
-                "item_code": se_doc.item_code,
+                "item_code": item_code,
                 "warehouse": se_doc.warehouse,
                 "qty": qty1,
-                "valuation_rate": flt(last_purchase_rate) if not bin_val_rate else bin_val_rate,
+                "valuation_rate": final_rate,
                 "barcode": se_doc.barcode,
-                "custom_stocker_id":se_doc.name
+                "custom_stocker_id": se_doc.name
             }]
         })
 
         recon_doc.insert(ignore_permissions=True)
+        recon_doc.submit()
+        frappe.db.set_value("Stocker Stock Entries", se_doc.name, "stock_reconciliation", 1)
         created_reconciliations.append(recon_doc.name)
 
     return ", ".join(created_reconciliations)

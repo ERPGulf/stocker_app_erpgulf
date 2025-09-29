@@ -8,60 +8,87 @@ from frappe.model.document import Document
 class StockerStockEntries(Document):
 	pass
 import json
+from frappe.utils import getdate, get_time, flt
 import frappe
 from frappe.utils.data import add_to_date, get_time, getdate
 from frappe.utils import flt, now_datetime
 @frappe.whitelist()
+
 def create_stock_reconciliation(entries):
 
-    entries = json.loads(entries)
 
-    created_reconciliations = []
+    entries = json.loads(entries)
+    grouped_entries = {}
+
+
     for entry in entries:
         if isinstance(entry, dict):
             entry = entry.get("name")
 
         se_doc = frappe.get_doc("Stocker Stock Entries", entry)
         item_code = frappe.db.get_value("Item", {"name": se_doc.item_code}, "name")
-
         date_only = getdate(se_doc.date)
         time_only = get_time(se_doc.date)
+
         bin_val_rate = frappe.db.get_value(
-        "Bin",
-        {"item_code": item_code, "warehouse": se_doc.warehouse},
-        "valuation_rate")
+            "Bin",
+            {"item_code": item_code, "warehouse": se_doc.warehouse},
+            "valuation_rate",
+        )
+        last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
 
 
-        uom1, qty1 = normalize_to_default_uom(item_code,se_doc.uom, se_doc.qty)
-        if not bin_val_rate:
-            last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
+        if not bin_val_rate and not last_purchase_rate:
+            frappe.log_error(f"Skipping {item_code} in {se_doc.warehouse}: no valuation rate found.", "Stock Reconciliation")
+            continue
 
+        uom1, qty1 = normalize_to_default_uom(item_code, se_doc.uom, se_doc.qty)
+        valuation_rate = bin_val_rate or frappe.db.get_value("Item", item_code, "last_purchase_rate") or 0
+
+        key = (item_code, se_doc.warehouse, date_only, time_only)
+
+        if key not in grouped_entries:
+            grouped_entries[key] = {
+                "item_code": item_code,
+                "warehouse": se_doc.warehouse,
+                "qty": 0,
+                "valuation_rate": valuation_rate,
+                "barcode": se_doc.barcode,
+                "custom_stocker_ids": [],
+                "date": date_only,
+                "time": time_only,
+            }
+
+        grouped_entries[key]["qty"] += qty1
+        grouped_entries[key]["custom_stocker_ids"].append(se_doc.name)
+
+    created_reconciliations = []
+
+
+    for key, data in grouped_entries.items():
         recon_doc = frappe.get_doc({
             "doctype": "Stock Reconciliation",
             "purpose": "Stock Reconciliation",
-            "posting_date": date_only,
-            "posting_time": time_only,
-            "set_posting_time":1,
+            "posting_date": data["date"],
+            "posting_time": data["time"],
+            "set_posting_time": 1,
             "items": [{
-                "item_code": se_doc.item_code,
-                "warehouse": se_doc.warehouse,
-                "qty": qty1,
-                "valuation_rate": flt(last_purchase_rate) if not bin_val_rate else bin_val_rate,
-                "barcode": se_doc.barcode,
-                "custom_stocker_id":se_doc.name
+                "item_code": data["item_code"],
+                "warehouse": data["warehouse"],
+                "qty": data["qty"],
+                "valuation_rate": flt(data["valuation_rate"]),
+                "barcode": data["barcode"],
             }]
         })
 
         recon_doc.insert(ignore_permissions=True)
         recon_doc.submit()
         created_reconciliations.append(recon_doc.name)
-        if recon_doc:
-                frappe.db.set_value(
-                    "Stocker Stock Entries",se_doc.name,"stock_reconciliation",1
-                )
+
+        for se_name in data["custom_stocker_ids"]:
+            frappe.db.set_value("Stocker Stock Entries", se_name, "stock_reconciliation", 1)
 
     return ", ".join(created_reconciliations)
-
 
 
 

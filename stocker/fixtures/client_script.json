@@ -9,5 +9,16 @@
   "name": "stock reconcilation menu",
   "script": "frappe.listview_settings['Stocker Stock Entries'] = {\r\n    onload: function(listview) {\r\n        listview.page.add_action_item(__('Create Stock Reconciliation'), function() {\r\n            let selected = listview.get_checked_items();\r\n\r\n            if (!selected.length) {\r\n                frappe.msgprint(__('Please select at least one Stock Entry'));\r\n                return;\r\n            }\r\n\r\n            frappe.call({\r\n                method: \"stocker.stocker.doctype.stocker_stock_entries.stocker_stock_entries.create_stock_reconciliation\",\r\n                args: {\r\n                    entries: selected.map(d => d.name)\r\n                },\r\n                freeze: true,\r\n                freeze_message: __(\"Creating Stock Reconciliation...\"),\r\n                callback: function(r) {\r\n                    if (!r.exc && r.message) {\r\n                        \r\n                        frappe.msgprint({\r\n                            title: __('Success'),\r\n                            indicator: 'green',\r\n                            message: __('Stock Reconciliation Created')\r\n                        });\r\n\r\n                       \r\n                        listview.refresh();\r\n                    }\r\n                }\r\n            });\r\n        });\r\n    }\r\n};\r\n",
   "view": "List"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Stocker Stock Entries",
+  "enabled": 1,
+  "modified": "2025-09-29 12:50:09.725758",
+  "module": "Stocker",
+  "name": "Stock reconciliation",
+  "script": "frappe.ui.form.on('Stocker Stock Entries', {\r\n    refresh: function(frm) {\r\n        if (!frm.is_new()) {\r\n            frm.add_custom_button(__('Create Stock Reconciliation'), function() {\r\n                frappe.call({\r\n                    method: \"stocker.stocker.api.create_stock_reconciliation_doc\",\r\n                    args: {\r\n                        entries: [frm.doc.name]\r\n                    },\r\n                    freeze: true,\r\n                    freeze_message: __(\"Creating Stock Reconciliation...\"),\r\n                    callback: function(r) {\r\n                        frappe.msgprint(r.message);\r\n                        // if (!r.exc && r.message) {\r\n                        //     // frappe.msgprint({\r\n                        //     // title: __('Success'),\r\n                        //     // indicator: 'green',\r\n                        //     // message: __('Stock Reconciliation Created')\r\n                        //     // });  // just show the text\r\n                            \r\n                        // }\r\n                    }\r\n                });\r\n            });\r\n        }\r\n    }\r\n});\r\n",
+  "view": "Form"
  }
 ]
