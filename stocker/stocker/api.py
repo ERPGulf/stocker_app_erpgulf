@@ -193,6 +193,7 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
                     "items": items
                 })
             Reconciliation_doc.insert(ignore_permissions=True)
+            Reconciliation_doc.submit()
             frappe.db.commit()
             if Reconciliation_doc:
                 frappe.db.set_value(
