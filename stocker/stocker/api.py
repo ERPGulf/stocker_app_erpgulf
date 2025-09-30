@@ -167,6 +167,15 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
                 # "shelf": shelf
             }
         ]
+        # system_qty = frappe.db.sql("""
+        #     SELECT SUM(actual_qty)
+        #     FROM `tabStock Ledger Entry`
+        #     WHERE item_code = %s
+        #     AND warehouse = %s
+        #     AND posting_date <= %s
+        # """, (item_code, warehouse, getdate(date)))[0][0]
+        # return system_qty
+
 
         doc = frappe.get_doc({
             "doctype": "Stocker Stock Entries",
@@ -178,6 +187,7 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             "item_code": item_code,
             "uom": uom,
             "qty": qty,
+            # "system_qty":total_qty,
             "employee": employee
         })
         doc.insert(ignore_permissions=True)
@@ -186,6 +196,7 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             Reconciliation_doc = frappe.get_doc({
                     "doctype": "Stock Reconciliation",
                     "purpose": "Stock Reconciliation",
+                    "naming_series":"STK-.YY..MM.-",
                     "cost_center": branch,
                     "set_posting_time":1,
                     "posting_date":date_only,
