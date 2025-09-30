@@ -30,12 +30,31 @@ def create_stock_reconciliation(entries):
         date_only = getdate(se_doc.date)
         time_only = get_time(se_doc.date)
 
-        bin_val_rate = frappe.db.get_value(
-            "Bin",
-            {"item_code": item_code, "warehouse": se_doc.warehouse},
-            "valuation_rate",
-        )
-        last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
+        bin_val_rate = frappe.db.sql("""
+            SELECT valuation_rate
+            FROM `tabBin`
+            WHERE item_code = %s AND warehouse = %s AND actual_qty > 0
+            LIMIT 1
+        """, (item_code, se_doc.warehouse))
+
+        if bin_val_rate:
+            bin_val_rate = bin_val_rate[0][0]
+        else:
+
+            bin_val_rate = frappe.db.sql("""
+                SELECT valuation_rate
+                FROM `tabBin`
+                WHERE item_code = %s AND actual_qty > 0
+                ORDER BY creation DESC
+                LIMIT 1
+            """, (item_code,))
+
+            bin_val_rate = bin_val_rate[0][0] if bin_val_rate else None
+
+
+        if not bin_val_rate:
+            last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
+
 
 
         if not bin_val_rate and not last_purchase_rate:
@@ -54,13 +73,13 @@ def create_stock_reconciliation(entries):
                 "qty": 0,
                 "valuation_rate": valuation_rate,
                 "barcode": se_doc.barcode,
-                "custom_stocker_ids": [],
+                "custom_stocker_id": [],
                 "date": date_only,
                 "time": time_only,
             }
 
         grouped_entries[key]["qty"] += qty1
-        grouped_entries[key]["custom_stocker_ids"].append(se_doc.name)
+        grouped_entries[key]["custom_stocker_id"].append(se_doc.name)
 
     created_reconciliations = []
 
@@ -80,6 +99,8 @@ def create_stock_reconciliation(entries):
                 "qty": data["qty"],
                 "valuation_rate": flt(data["valuation_rate"]),
                 "barcode": data["barcode"],
+
+
             }]
         })
 
@@ -88,7 +109,7 @@ def create_stock_reconciliation(entries):
             recon_doc.submit()
             created_reconciliations.append(recon_doc.name)
 
-            for se_name in data["custom_stocker_ids"]:
+            for se_name in data["custom_stocker_id"]:
                 frappe.db.set_value("Stocker Stock Entries", se_name, "stock_reconciliation", 1)
 
         except Exception as e:

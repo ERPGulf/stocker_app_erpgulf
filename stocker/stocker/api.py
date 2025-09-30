@@ -126,7 +126,6 @@ def get_items(item_code=None, uom=None, barcode=None, warehouse=None):
         )
 
 
-
 @frappe.whitelist(allow_guest=True)
 def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch=None, barcode=None, shelf=None):
     try:
@@ -146,35 +145,34 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             )
 
 
-        bin_val_rate = frappe.db.get_value(
-        "Bin",
-        {"item_code": item_code, "warehouse": warehouse},
-        "valuation_rate")
+        bin_val_rate = frappe.db.sql("""
+            SELECT valuation_rate
+            FROM `tabBin`
+            WHERE item_code = %s AND warehouse = %s AND actual_qty > 0
+            LIMIT 1
+        """, (item_code, warehouse))
 
+        if bin_val_rate:
+            bin_val_rate = bin_val_rate[0][0]
+        else:
+
+            bin_val_rate = frappe.db.sql("""
+                SELECT valuation_rate
+                FROM `tabBin`
+                WHERE item_code = %s AND actual_qty > 0
+                ORDER BY creation DESC
+                LIMIT 1
+            """, (item_code,))
+            bin_val_rate = bin_val_rate[0][0] if bin_val_rate else None
+
+
+        if not bin_val_rate:
+            bin_val_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
 
         uom1, qty1 = normalize_to_default_uom(item_code, uom, qty)
-        if not bin_val_rate:
-            last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
-        setting_doc=frappe.get_doc("Stocker Stock Setting")
-        live_reconciliation=setting_doc.live__reconciliation
-        items = [
-            {
-                "item_code": item_code,
-                "qty": qty1,
-                "warehouse": warehouse,
-                "valuation_rate": flt(last_purchase_rate) if not bin_val_rate else bin_val_rate,
-                "barcode": barcode,
-                # "shelf": shelf
-            }
-        ]
-        # system_qty = frappe.db.sql("""
-        #     SELECT SUM(actual_qty)
-        #     FROM `tabStock Ledger Entry`
-        #     WHERE item_code = %s
-        #     AND warehouse = %s
-        #     AND posting_date <= %s
-        # """, (item_code, warehouse, getdate(date)))[0][0]
-        # return system_qty
+
+        setting_doc = frappe.get_doc("Stocker Stock Setting")
+        live_reconciliation = setting_doc.live__reconciliation
 
 
         doc = frappe.get_doc({
@@ -187,31 +185,47 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             "item_code": item_code,
             "uom": uom,
             "qty": qty,
-            # "system_qty":total_qty,
             "employee": employee
         })
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
-        if live_reconciliation == 1:
+
+
+        if live_reconciliation == 1 and bin_val_rate:
+            items = [
+                {
+                    "item_code": item_code,
+                    "qty": qty1,
+                    "warehouse": warehouse,
+                    "valuation_rate": flt(bin_val_rate),
+                    "barcode": barcode,
+                    "custom_stocker_id": doc.name
+                }
+            ]
             Reconciliation_doc = frappe.get_doc({
-                    "doctype": "Stock Reconciliation",
-                    "purpose": "Stock Reconciliation",
-                    "naming_series":"STK-.YY..MM.-",
-                    "cost_center": branch,
-                    "set_posting_time":1,
-                    "posting_date":date_only,
-                    "posting_time":time_only,
-                    "items": items
-                })
+                "doctype": "Stock Reconciliation",
+                "purpose": "Stock Reconciliation",
+                "naming_series": "STK-.YY..MM.-",
+                "cost_center": branch,
+                "set_warehouse": warehouse,
+                "set_posting_time": 1,
+                "posting_date": date_only,
+                "posting_time": time_only,
+                "items": items
+            })
             Reconciliation_doc.insert(ignore_permissions=True)
             Reconciliation_doc.submit()
-            frappe.db.commit()
-            if Reconciliation_doc:
-                frappe.db.set_value(
-                    "Stocker Stock Entries",doc.name,"stock_reconciliation",1
-                )
-                # frappe.db.commit()
-                # Reconciliation_doc.submit()
+
+            frappe.db.set_value(
+                "Stocker Stock Entries", doc.name, "stock_reconciliation", 1
+            )
+
+        elif live_reconciliation == 1 and not bin_val_rate:
+
+            frappe.log_error(
+                f"No valuation rate found for Item {item_code} while creating reconciliation.",
+                "Stock Reconciliation Skipped"
+            )
 
         data = {
             "status": "success",
@@ -224,7 +238,8 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             "qty": doc.qty,
             "date": doc.date,
             "employee": doc.employee,
-            "branch": doc.branch
+            "branch": doc.branch,
+            "stock_reconciliation": 1 if (live_reconciliation == 1 and bin_val_rate) else 0
         }
         return Response(
             json.dumps({"data": data}),
@@ -239,7 +254,6 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             status=500,
             mimetype="application/json"
         )
-
 
 
 
@@ -873,14 +887,27 @@ def create_stock_reconciliation_doc(entries):
         time_only = get_time(se_doc.date)
 
 
-        bin_val_rate = frappe.db.get_value(
-            "Bin",
-            {"item_code": item_code, "warehouse": se_doc.warehouse},
-            "valuation_rate"
-        )
+        bin_val_rate = frappe.db.sql("""
+            SELECT valuation_rate
+            FROM `tabBin`
+            WHERE item_code = %s AND warehouse = %s AND actual_qty > 0
+            LIMIT 1
+        """, (item_code, se_doc.warehouse))
 
+        if bin_val_rate:
+            bin_val_rate = bin_val_rate[0][0]
+        else:
 
-        last_purchase_rate = None
+            bin_val_rate = frappe.db.sql("""
+                SELECT valuation_rate
+                FROM `tabBin`
+                WHERE item_code = %s AND actual_qty > 0
+                ORDER BY creation DESC
+                LIMIT 1
+            """, (item_code,))
+
+            bin_val_rate = bin_val_rate[0][0] if bin_val_rate else None
+
         if not bin_val_rate:
             last_purchase_rate = frappe.db.get_value("Item", item_code, "last_purchase_rate")
 
@@ -903,7 +930,7 @@ def create_stock_reconciliation_doc(entries):
             "naming_series":"STK-.YY..MM.-",
             "posting_date": date_only,
             "posting_time": time_only,
-            "set_warehouse": data["warehouse"],
+            "set_warehouse": se_doc.warehouse,
             "set_posting_time": 1,
             "items": [{
                 "item_code": item_code,
