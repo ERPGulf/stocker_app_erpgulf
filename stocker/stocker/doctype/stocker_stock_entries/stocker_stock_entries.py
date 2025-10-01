@@ -29,6 +29,26 @@ def create_stock_reconciliation(entries):
         item_code = frappe.db.get_value("Item", {"name": se_doc.item_code}, "name")
         date_only = getdate(se_doc.date)
         time_only = get_time(se_doc.date)
+        system_qty_result = frappe.db.sql(
+            """
+            SELECT qty_after_transaction
+            FROM `tabStock Ledger Entry`
+            WHERE item_code=%s AND warehouse=%s AND posting_datetime<=%s
+            ORDER BY
+                CAST(posting_date AS DATETIME) + CAST(posting_time AS TIME) DESC
+            LIMIT 1;
+            """,
+            (item_code, se_doc.warehouse, se_doc.date)
+        )
+        system_qty = system_qty_result[0][0] if system_qty_result else 0
+
+
+        if se_doc.qty == system_qty:
+            frappe.log_error(
+                f"Skipping {se_doc.name}: Inventory Qty ({se_doc.qty}) is same as System Qty ({system_qty})",
+                "Stock Reconciliation Skipped"
+            )
+            continue
 
         bin_val_rate = frappe.db.sql("""
             SELECT valuation_rate

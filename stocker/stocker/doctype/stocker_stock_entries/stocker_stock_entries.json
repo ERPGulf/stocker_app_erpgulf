@@ -17,7 +17,8 @@
   "system_qty",
   "valuation_rate",
   "column_break_bkqo",
-  "stock_reconciliation"
+  "stock_reconciliation",
+  "data_tkrs"
  ],
  "fields": [
   {
@@ -88,14 +89,19 @@
   {
    "fieldname": "system_qty",
    "fieldtype": "Float",
-   "label": "System Qty ",
+   "label": "System Qty "
+  },
+  {
+   "default": "Not Adjusted as Inventory Qty is same as System Qty",
+   "fieldname": "data_tkrs",
+   "fieldtype": "Data",
    "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-30 09:38:15.371127",
+ "modified": "2025-10-01 10:20:44.016560",
  "modified_by": "Administrator",
  "module": "Stocker",
  "name": "Stocker Stock Entries",

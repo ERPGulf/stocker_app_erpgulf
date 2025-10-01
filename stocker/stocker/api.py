@@ -173,6 +173,20 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
 
         setting_doc = frappe.get_doc("Stocker Stock Setting")
         live_reconciliation = setting_doc.live__reconciliation
+        system_qty_result = frappe.db.sql(
+            """
+            SELECT qty_after_transaction
+            FROM `tabStock Ledger Entry`
+            WHERE item_code=%s AND warehouse=%s AND posting_datetime=%s
+            ORDER BY
+                CAST(posting_date AS DATETIME) + CAST(posting_time AS TIME) DESC
+            LIMIT 1;
+            """,
+            (item_code, warehouse, date_time)
+        )
+        system_qty = system_qty_result[0][0] if system_qty_result else 0
+
+
 
 
         doc = frappe.get_doc({
@@ -185,13 +199,16 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             "item_code": item_code,
             "uom": uom,
             "qty": qty,
+            "system_qty": system_qty,
             "employee": employee
         })
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
+        create_reconciliation = True
+        if live_reconciliation == 1 and system_qty == qty1:
+            create_reconciliation = False
 
-
-        if live_reconciliation == 1 and bin_val_rate:
+        if live_reconciliation == 1 and create_reconciliation and bin_val_rate:
             items = [
                 {
                     "item_code": item_code,
@@ -226,6 +243,9 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
                 f"No valuation rate found for Item {item_code} while creating reconciliation.",
                 "Stock Reconciliation Skipped"
             )
+        elif live_reconciliation == 0 and system_qty == qty1:
+            frappe.db.set_value("Stocker Stock Entries", doc.name, "stock_reconciliation", 1)
+
 
         data = {
             "status": "success",
@@ -885,6 +905,20 @@ def create_stock_reconciliation_doc(entries):
         item_code = se_doc.item_code
         date_only = getdate(se_doc.date)
         time_only = get_time(se_doc.date)
+        system_qty_result = frappe.db.sql(
+            """
+            SELECT qty_after_transaction
+            FROM `tabStock Ledger Entry`
+            WHERE item_code=%s AND warehouse=%s AND posting_datetime=%s
+            ORDER BY
+                CAST(posting_date AS DATETIME) + CAST(posting_time AS TIME) DESC
+            LIMIT 1;
+            """,
+            (item_code, se_doc.warehouse, se_doc.date)
+        )
+        system_qty = system_qty_result[0][0] if system_qty_result else 0
+        if se_doc.qty== system_qty:
+            frappe.throw("Not Adjusted as Inventory Qty is same as System Qty")
 
 
         bin_val_rate = frappe.db.sql("""
@@ -948,3 +982,20 @@ def create_stock_reconciliation_doc(entries):
         created_reconciliations.append(recon_doc.name)
 
     return ", ".join(created_reconciliations)
+
+
+@frappe.whitelist(allow_guest=True)
+def get_stock(item_code, warehouse, to):
+    return frappe.db.sql(
+        """
+        SELECT qty_after_transaction, valuation_rate
+        FROM `tabStock Ledger Entry`
+        WHERE item_code=%s AND warehouse=%s AND posting_datetime<=%s
+        ORDER BY
+            CAST(posting_date AS DATETIME) + CAST(posting_time AS TIME) DESC
+        LIMIT 1;
+        """,
+        (item_code, warehouse, to),
+        as_dict=True
+    )
+

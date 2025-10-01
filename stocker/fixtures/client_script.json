@@ -20,5 +20,16 @@
   "name": "Stock reconciliation",
   "script": "frappe.ui.form.on('Stocker Stock Entries', {\r\n    refresh: function(frm) {\r\n        if (!frm.is_new()) {\r\n            frm.add_custom_button(__('Create Stock Reconciliation'), function() {\r\n                frappe.call({\r\n                    method: \"stocker.stocker.api.create_stock_reconciliation_doc\",\r\n                    args: {\r\n                        entries: [frm.doc.name]\r\n                    },\r\n                    freeze: true,\r\n                    freeze_message: __(\"Creating Stock Reconciliation...\"),\r\n                    callback: function(r) {\r\n                        frappe.msgprint(r.message);\r\n                        // if (!r.exc && r.message) {\r\n                        //     // frappe.msgprint({\r\n                        //     // title: __('Success'),\r\n                        //     // indicator: 'green',\r\n                        //     // message: __('Stock Reconciliation Created')\r\n                        //     // });  // just show the text\r\n                            \r\n                        // }\r\n                    }\r\n                });\r\n            });\r\n        }\r\n    }\r\n});\r\n",
   "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Stocker Stock Entries",
+  "enabled": 1,
+  "modified": "2025-10-01 13:22:30.274215",
+  "module": "Stocker",
+  "name": "set field as read only",
+  "script": "frappe.ui.form.on('Stocker Stock Entries', {\r\n    refresh: function(frm) {\r\n        \r\n        if (!frm.is_new()) {\r\n            frm.set_df_property('system_qty', 'read_only', 1);\r\n        }\r\n\r\n        \r\n        if (frm.doc.stock_reconciliation === 1) {\r\n            frm.set_df_property('stock_reconciliation', 'read_only', 1);\r\n        }\r\n\r\n        // Show/hide data_tkrs field based on conditions\r\n        frm.toggle_display('data_tkrs', frm.doc.qty === frm.doc.system_qty && frm.doc.stock_reconciliation === 1);\r\n    },\r\n\r\n    qty: function(frm) {\r\n        frm.toggle_display('data_tkrs', frm.doc.qty === frm.doc.system_qty && frm.doc.stock_reconciliation === 1);\r\n    },\r\n\r\n    system_qty: function(frm) {\r\n        frm.toggle_display('data_tkrs', frm.doc.qty === frm.doc.system_qty && frm.doc.stock_reconciliation === 1);\r\n    },\r\n\r\n    stock_reconciliation: function(frm) {\r\n        frm.toggle_display('data_tkrs', frm.doc.qty === frm.doc.system_qty && frm.doc.stock_reconciliation === 1);\r\n    }\r\n});\r\n",
+  "view": "Form"
  }
 ]
