@@ -177,7 +177,7 @@ def create_stock_entry(item_id, date_time, warehouse, uom, qty, employee, branch
             """
             SELECT qty_after_transaction
             FROM `tabStock Ledger Entry`
-            WHERE item_code=%s AND warehouse=%s AND posting_datetime=%s
+            WHERE item_code=%s AND warehouse=%s AND posting_datetime<=%s
             ORDER BY
                 CAST(posting_date AS DATETIME) + CAST(posting_time AS TIME) DESC
             LIMIT 1;
