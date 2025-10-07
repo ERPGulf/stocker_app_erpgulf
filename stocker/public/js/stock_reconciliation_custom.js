@@ -30,6 +30,11 @@ frappe.ui.form.on('Stock Reconciliation', {
                             },
                             callback(r) {
                                 if (r.message) {
+                                    let first = r.message[0];
+                                    frm.set_value("set_posting_time", 1);
+                                    if (first.posting_date) frm.set_value("posting_date", first.posting_date);
+                                    if (first.posting_time) frm.set_value("posting_time", first.posting_time);
+                                    if (first.warehouse) frm.set_value("set_warehouse", first.warehouse);
                                     r.message.forEach(d => {
                                         let empty_row = frm.doc.items.find(i => !i.item_code);
                                         let row = empty_row || frm.add_child("items");

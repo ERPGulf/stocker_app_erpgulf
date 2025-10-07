@@ -734,6 +734,8 @@ def make_stock_entry(source_name, filters=None):
             fields=["name", "item_code", "warehouse", "uom", "qty", "barcode", "shelf"]
         )
         for d in docs:
+            date_only = getdate(d.date)
+            time_only = get_time(d.date)
             d.uom, d.qty = normalize_to_default_uom(d.item_code, d.uom, d.qty)
             bin_val_rate1 = frappe.db.get_value(
                 "Bin",
@@ -755,11 +757,15 @@ def make_stock_entry(source_name, filters=None):
                 "qty": d.qty,
                 "barcode": d.barcode,
                 "shelf": d.shelf,
+                "posting_date":date_only,
+                "posting_time": time_only,
                 "valuation_rate": valuation_rate,
             })
     else:
         for name in source_name:
             doc = frappe.get_doc("Stocker Stock Entries", name)
+            date_only = getdate(doc.date)
+            time_only = get_time(doc.date)
             uom, qty = normalize_to_default_uom(doc.item_code, doc.uom, doc.qty)
             bin_val_rate = frappe.db.get_value(
                 "Bin",
@@ -782,13 +788,15 @@ def make_stock_entry(source_name, filters=None):
                 "qty": qty,
                 "barcode": getattr(doc, "barcode", None),
                 "shelf": getattr(doc, "shelf", None),
+                "posting_date":date_only,
+                "posting_time": time_only,
                 "valuation_rate": valuation_rate,
             })
 
 
     merged = {}
     for item in raw_items:
-        key = (item["item_code"], item["warehouse"], item["uom"], item["barcode"], item["shelf"])
+        key = (item["item_code"], item["warehouse"], item["uom"],item["posting_date"])
         if key not in merged:
             merged[key] = item
         else:
@@ -863,9 +871,7 @@ def on_submit(doc, method):
     for row in doc.items:
         if row.item_code and row.warehouse and doc.posting_date and doc.posting_time:
             item_code = frappe.db.get_value("Item", {"item_name":row.item_code}, "name")
-
             posting_datetime = f"{doc.posting_date} {doc.posting_time}"
-            # return posting_datetime
             entries = frappe.get_all(
                 "Stocker Stock Entries",
                 filters={
@@ -876,12 +882,7 @@ def on_submit(doc, method):
                 },
                 fields=["name"]
             )
-
-
-
-
             for entry in entries:
-                frappe.msgprint(entry.name)
                 frappe.db.set_value(
                     "Stocker Stock Entries",
                     entry.name,
@@ -902,6 +903,9 @@ def create_stock_reconciliation_doc(entries):
             entry = entry.get("name")
 
         se_doc = frappe.get_doc("Stocker Stock Entries", entry)
+        if se_doc.stock_reconciliation == 1:
+            frappe.throw("This entry is already reconciled ")
+
         item_code = se_doc.item_code
         date_only = getdate(se_doc.date)
         time_only = get_time(se_doc.date)
@@ -918,7 +922,7 @@ def create_stock_reconciliation_doc(entries):
         )
         system_qty = system_qty_result[0][0] if system_qty_result else 0
         if se_doc.qty== system_qty:
-            frappe.throw("Not Adjusted as Inventory Qty is same as System Qty")
+            frappe.throw("This entry is already reconciled ")
 
 
         bin_val_rate = frappe.db.sql("""
