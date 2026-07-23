@@ -1,0 +1,89 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-23 08:46:13.224511",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "customer",
+  "staff",
+  "service",
+  "appoinment_date",
+  "appoinment_time",
+  "status",
+  "amount",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "staff",
+   "fieldtype": "Link",
+   "label": "Staff",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "service",
+   "fieldtype": "Link",
+   "label": "service",
+   "options": "Item"
+  },
+  {
+   "fieldname": "appoinment_date",
+   "fieldtype": "Date",
+   "label": "Appoinment date"
+  },
+  {
+   "fieldname": "appoinment_time",
+   "fieldtype": "Time",
+   "label": "Appoinment time"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "booked\ncompleted\ncanceled"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Int",
+   "label": "amount"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-23 09:05:19.567477",
+ "modified_by": "Administrator",
+ "module": "Stocker",
+ "name": "Caffe Appoinment",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -629,7 +629,7 @@ def create_qr_code(doc, method):
             value = user_name.encode('utf-8').hex()
             tlv_array.append(''.join([tag, length, value]))
 
-            full_name = "Full_Name: " + str(doc.first_name + "  " + doc.last_name)
+            full_name = "Full_Name: " + " ".join(filter(None, [doc.first_name, doc.last_name]))
             tag = bytes([1]).hex()
             length = bytes([len(full_name.encode('utf-8'))]).hex()
             value = full_name.encode('utf-8').hex()
