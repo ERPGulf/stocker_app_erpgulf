@@ -28,6 +28,8 @@ fixtures = [
         "filters": {"module": "Stocker"},
     },
 ]
+
+
 # User Data Protection
 # --------------------
 
