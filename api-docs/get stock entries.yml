@@ -1,0 +1,68 @@
+info:
+  name: get stock entries
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: https://malavika16.erpgulf.com:3045/api/method/stocker.stocker.api.list_stock_entries
+  body:
+    type: form-urlencoded
+    data:
+      - name: warehouse
+        value: All Warehouses - M
+      - name: item_code
+        value: ITEM-00351
+  auth:
+    type: bearer
+    token: "{token}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  
+  ## 4. Get Stock Entries — `get stock entries.yml`
+
+  **Endpoint:** `GET .../api/method/stocker.stocker.api.list_stock_entries`
+  **Function:** [`list_stock_entries()`](../stocker/stocker/api.py#L284-L330)
+
+  ### What it does
+  Lists `Stocker Stock Entries` records, optionally filtered by warehouse/item, or restricted to
+  today's entries. Ordered newest-first.
+
+  ### Parameters
+  | Name | Required | Description |
+  |---|---|---|
+  | `warehouse` | No | Filter by warehouse. |
+  | `item_code` | No | Filter by item code. |
+  | `today_only` | No | If truthy, only returns entries with `date` between today 00:00:00 and 23:59:59. |
+
+  ### Success response — `200`
+  ```json
+  {
+    "data": [
+      {
+        "entry_id": "ou6vuoqdor",
+        "warehouse": "All Warehouses - M",
+        "item_code": "ITEM-00351",
+        "barcode": null,
+        "shelf": null,
+        "uom": "Nos",
+        "qty": 10,
+        "date": "2026-06-01 00:00:00"
+      }
+    ]
+  }
+  ```
+
+  ### Error response — `500`
+  ```json
+  { "error": "<exception message>" }
+  ```
+  Logged under `"list_stock_entries API Error"`.
+
+  ---

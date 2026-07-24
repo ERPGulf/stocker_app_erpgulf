@@ -1,0 +1,57 @@
+info:
+  name: warehouse list api
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: https://malavika16.erpgulf.com:3045/api/method/stocker.stocker.api.warehouse_list
+  body:
+    type: form-urlencoded
+    data:
+      - name: employee_code
+        value: HR-EMP-00002
+  auth:
+    type: bearer
+    token: "{token}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  ## 1. Warehouse List — `warehouse list api.yml`
+
+  **Endpoint:** `GET .../api/method/stocker.stocker.api.warehouse_list`
+  **Function:** [`warehouse_list()`](../stocker/stocker/api.py#L22-L52)
+
+  ### What it does
+  Looks up an `Employee` by `employee_code`, reads that employee's `custom_stocker_warehouse`
+  field (a custom field added on the Employee doctype, see
+  [`custom_field.json`](../stocker/fixtures/custom_field.json)), and returns the matching
+  `Warehouse` record.
+
+  ### Parameters
+  | Name | Location | Required | Description |
+  |---|---|---|---|
+  | `employee_code` | form/query | Yes | Name (ID) of the `Employee` doc. Used to fetch the employee's assigned warehouse. |
+
+  ### Success response — `200`
+  ```json
+  {
+    "data": [
+      { "warehouse_id": "All Warehouses - M", "warehouse_name": "All Warehouses" }
+    ]
+  }
+  ```
+
+  ### Error response — `500`
+  ```json
+  { "error": "<exception message>" }
+  ```
+  Raised if `employee_code` doesn't resolve to an `Employee` (via `frappe.get_doc`), or if the
+  employee has no `custom_stocker_warehouse` set (warehouse list returns empty).
+
+  ---

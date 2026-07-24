@@ -27,6 +27,7 @@ def warehouse_list(employee_code=None):
     try:
 
         employee_doc=frappe.get_doc("Employee",employee_code)
+
         warehouse_name=employee_doc.custom_stocker_warehouse
         warehouse_list = frappe.get_all(
             "Warehouse",
@@ -62,6 +63,7 @@ def get_items(item_code=None, uom=None, barcode=None, warehouse=None):
                 ["parent", "uom"],
                 as_dict=True
             )
+
 
             if not barcode_doc:
                 return Response(
@@ -507,7 +509,7 @@ def list_items(item_group=None, last_updated_time=None, pos_profile = None):
                 barcodes = frappe.get_all(
                     "Item Barcode",
                     filters={"parent": item.name},
-                    fields=["name", "barcode", "uom", "custom_editable_price", "custom_editable_quantity"],
+                    fields=["name", "barcode", "uom"],
                 )
 
                 price_list = "Retail Price"
@@ -554,13 +556,7 @@ def list_items(item_group=None, last_updated_time=None, pos_profile = None):
                                 "uom": uom.uom,
                                 "conversion_factor": uom.conversion_factor,
                                 "price": round(price_map.get(uom.uom, 0.0), 2),
-                                "barcode": ", ".join(barcode_map.get(uom.uom, [])),
-                                "editable_price": bool(
-                                    frappe.get_value("UOM", uom.uom, "custom_editable_price")
-                                ),
-                                "editable_quantity": bool(
-                                    frappe.get_value("UOM", uom.uom, "custom_editable_quantity")
-                                ),
+                                "barcode": ", ".join(barcode_map.get(uom.uom, []))
                             }
                             for uom in uoms
                         ],

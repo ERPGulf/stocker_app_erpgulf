@@ -1,0 +1,72 @@
+info:
+  name: update stock entry
+  type: http
+  seq: 8
+
+http:
+  method: PUT
+  url: https://malavika16.erpgulf.com:3045/api/method/stocker.stocker.api.update_stock_entry
+  body:
+    type: form-urlencoded
+    data:
+      - name: entry_id
+        value: ou6vuoqdor
+      - name: qty
+        value: "1"
+  auth:
+    type: bearer
+    token: "{token}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  
+  ## 5. Update Stock Entry — `update stock entry.yml`
+
+  **Endpoint:** `PUT .../api/method/stocker.stocker.api.update_stock_entry`
+  **Function:** [`update_stock_entry()`](../stocker/stocker/api.py#L336-L383)
+
+  ### What it does
+  Loads a `Stocker Stock Entries` doc by `entry_id` and updates only the fields explicitly
+  passed (any field left `None` is untouched), then saves.
+
+  ### Parameters
+  | Name | Required | Description |
+  |---|---|---|
+  | `entry_id` | Yes | Name of the `Stocker Stock Entries` doc to update. |
+  | `warehouse` | No | New warehouse. |
+  | `barcode` | No | New barcode. |
+  | `shelf` | No | New shelf. |
+  | `date` | No | New date. |
+  | `item_code` | No | New item code. |
+  | `uom` | No | New UOM. |
+  | `qty` | No | New quantity. |
+
+  ### Success response — `200`
+  ```json
+  {
+    "data": {
+      "status": "success",
+      "entry_id": "ou6vuoqdor",
+      "warehouse": "All Warehouses - M",
+      "barcode": null,
+      "shelf": null,
+      "date": "2026-06-01",
+      "item_code": "ITEM-00351",
+      "uom": "Nos",
+      "qty": 1
+    }
+  }
+  ```
+
+  ### Error response — `500`
+  ```json
+  { "error": "<exception message>" }
+  ```
+  Logged under `"update_stock_entry API Error"`.
+
+  ---

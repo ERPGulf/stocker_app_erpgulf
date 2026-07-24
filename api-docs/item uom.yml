@@ -1,0 +1,51 @@
+info:
+  name: item uom
+  type: http
+  seq: 16
+
+http:
+  method: GET
+  url: https://malavika16.erpgulf.com:3045/api/method/stocker.stocker.api.get_item_uom
+  body:
+    type: form-urlencoded
+    data:
+      - name: item_code
+        value: ITEM-00345
+  auth:
+    type: bearer
+    token: "{token}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  
+  ## 8. Item UOM — `item uom.yml`
+
+  **Endpoint:** `GET .../api/method/stocker.stocker.api.get_item_uom`
+  **Function:** [`get_item_uom()`](../stocker/stocker/api.py#L806-L825)
+
+  ### What it does
+  Returns the list of UOMs configured on an `Item`'s `uoms` child table
+  (`UOM Conversion Detail`).
+
+  ### Parameters
+  | Name | Required | Description |
+  |---|---|---|
+  | `item_code` | Yes | `Item` name to fetch UOMs for. |
+
+  ### Success response — `200`
+  ```json
+  { "data": ["Nos", "Box", "Carton"] }
+  ```
+
+  ### Error response — `500`
+  ```json
+  { "data": "<exception message>" }
+  ```
+  Note: unlike the other endpoints, this one returns the error under the `data` key, not `error`.
+
+  ---

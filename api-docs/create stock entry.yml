@@ -1,0 +1,100 @@
+info:
+  name: create stock entry
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: https://malavika16.erpgulf.com:3045/api/method/stocker.stocker.api.create_stock_entry
+  body:
+    type: form-urlencoded
+    data:
+      - name: item_id
+        value: ITEM-00351
+      - name: date_time
+        value: 2026-06-01
+      - name: warehouse
+        value: All Warehouses - M
+      - name: uom
+        value: Nos
+      - name: qty
+        value: "10"
+      - name: employee
+        value: ""
+  auth:
+    type: bearer
+    token: "{token}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |
+  
+  ## 3. Create Stock Entry — `create stock entry.yml`
+
+  **Endpoint:** `POST .../api/method/stocker.stocker.api.create_stock_entry`
+  **Function:** [`create_stock_entry()`](../stocker/stocker/api.py#L131-L278)
+
+  ### What it does
+  Records a physical stock count/movement in the custom `Stocker Stock Entries` doctype, and
+  optionally auto-creates + submits an ERPNext `Stock Reconciliation` if live reconciliation is
+  enabled.
+
+  Flow:
+  1. Validates `item_id` resolves to an existing `Item`.
+  2. Determines a valuation rate by checking, in order: `Bin` for the same item+warehouse with
+     stock > 0 → `Bin` for the same item in any warehouse (most recent) → `Item.last_purchase_rate`.
+  3. Converts `qty`/`uom` to the item's default stock UOM via
+     [`normalize_to_default_uom()`](../stocker/stocker/api.py#L688-L709).
+  4. Reads the `Stocker Stock Setting` singleton's `live__reconciliation` flag.
+  5. Looks up the last known `Stock Ledger Entry` quantity for the item/warehouse as of
+     `date_time` (`system_qty`).
+  6. Inserts the `Stocker Stock Entries` doc.
+  7. If live reconciliation is on and the counted qty differs from `system_qty` (and a valuation
+     rate was found), creates and submits a `Stock Reconciliation` referencing this entry
+     (`custom_stocker_id`), and flags the entry's `stock_reconciliation = 1`.
+     - If reconciliation is on but qty matches system qty, or reconciliation is off and qty
+       matches, the entry is marked reconciled (`1`) without creating a Stock Reconciliation doc.
+
+  ### Parameters
+  | Name | Required | Description |
+  |---|---|---|
+  | `item_id` | Yes | `Item` name to record stock for. |
+  | `date_time` | Yes | Date (or `YYYY-MM-DD HH:MM:SS`) of the count. |
+  | `warehouse` | Yes | Warehouse the count applies to. |
+  | `uom` | Yes | UOM the `qty` was counted in. |
+  | `qty` | Yes | Counted quantity. |
+  | `employee` | Yes | Employee performing the count. |
+  | `branch` | No | Cost center, used as `set_warehouse`/`cost_center` on the reconciliation. |
+  | `barcode` | No | Barcode scanned for this entry. |
+  | `shelf` | No | Shelf location. |
+
+  ### Success response — `200`
+  ```json
+  {
+    "data": {
+      "status": "success",
+      "id": "ou6vuoqdor",
+      "item_code": "ITEM-00351",
+      "warehouse": "All Warehouses - M",
+      "shelf": null,
+      "barcode": null,
+      "uom": "Nos",
+      "qty": 10,
+      "date": "2026-06-01",
+      "employee": "HR-EMP-00002",
+      "branch": null,
+      "stock_reconciliation": 1
+    }
+  }
+  ```
+
+  ### Error responses
+  - `404` — `{"status": "error", "message": "Item with name '<item_id>' does not exist."}`
+  - `500` — any other exception (also logged via `frappe.log_error` under
+    `"create_stock_entry Error"`).
+
+  ---

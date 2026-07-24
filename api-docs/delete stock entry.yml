@@ -1,0 +1,50 @@
+info:
+  name: delete stock entry
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: https://malavika16.erpgulf.com:3045/api/method/stocker.stocker.api.delete_stock_entry
+  body:
+    type: form-urlencoded
+    data:
+      - name: entry_id
+        value: ou6vuoqdor
+  auth:
+    type: bearer
+    token: "{token}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |
+  
+  ## 6. Delete Stock Entry — `delete stock entry.yml`
+
+  **Endpoint:** `DELETE .../api/method/stocker.stocker.api.delete_stock_entry`
+  **Function:** [`delete_stock_entry()`](../stocker/stocker/api.py#L389-L408)
+
+  ### What it does
+  Deletes a `Stocker Stock Entries` doc by name (`ignore_permissions=True`).
+
+  ### Parameters
+  | Name | Required | Description |
+  |---|---|---|
+  | `entry_id` | Yes | Name of the `Stocker Stock Entries` doc to delete. |
+
+  ### Success response — `200`
+  ```json
+  { "status": "success", "message": "Entry ou6vuoqdor deleted" }
+  ```
+
+  ### Error response — `500`
+  ```json
+  { "error": "<exception message>" }
+  ```
+  Logged under `"delete_stock_entry API Error"`.
+
+  ---

@@ -1,0 +1,95 @@
+info:
+  name: list item api
+  type: http
+  seq: 12
+
+http:
+  method: GET
+  url: https://malavika16.erpgulf.com:3045/api/method/stocker.stocker.api.list_items
+  body:
+    type: form-urlencoded
+    data:
+      - name: item_group
+        value: Raw Material
+  auth:
+    type: bearer
+    token: "{token}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |
+  ## 2. List Items — `list item api.yml` and `get items.yml`
+
+  **Endpoint:** `GET .../api/method/stocker.stocker.api.list_items`
+  **Function:** [`list_items()`](../stocker/stocker/api.py#L413-L585)
+
+  > Note: both `list item api.yml` and `get items.yml` call the same `list_items` function
+  > (just with different example parameters). There is no request in this collection that hits
+  > the separate `get_items()` function in the code — see the Appendix below.
+
+  ### What it does
+  Returns items grouped by `Item Group`, enriched with barcodes, UOM conversions and prices.
+
+  - Optional `item_group` filter (partial match, `LIKE %value%`).
+  - Optional `last_updated_time` (`YYYY-MM-DD HH:MM:SS`) restricts results to items whose `Item`
+    or `Item Price` records were modified after that timestamp (delta sync).
+  - Disabled items (`disabled=1`) are skipped entirely.
+  - If the item's `Item Group` has `custom_disabled` set, the group is still returned (so the
+    client knows it exists) but its item list stays empty.
+  - `custom_item_name_arabic` / `custom_item_name_in_english` (custom fields, if present on the
+    Item doctype) are used to populate `item_name_arabic` / `item_name_english`.
+  - Prices are read from `Item Price` for a price list — defaults to `"Retail Price"`, or the
+    `selling_price_list` of the given `pos_profile` if supplied.
+  - Barcodes are grouped by UOM, and joined with `, ` inside each UOM's entry.
+
+  ### Parameters
+  | Name | Required | Description |
+  |---|---|---|
+  | `item_group` | No | Partial match filter on Item Group name. |
+  | `last_updated_time` | No | Only return items/prices modified after this datetime (`YYYY-MM-DD HH:MM:SS`). |
+  | `pos_profile` | No | POS Profile name, used to resolve which price list to read prices from. |
+
+  ### Success response — `200`
+  ```json
+  {
+    "data": [
+      {
+        "item_group_id": "Raw Material",
+        "item_group": "Raw Material",
+        "item_group_disabled": false,
+        "items": [
+          {
+            "item_id": "ITEM-00351",
+            "item_code": "ITEM-00351",
+            "item_name": "...",
+            "item_name_english": "",
+            "item_name_arabic": "",
+            "tax_percentage": 0.0,
+            "description": "...",
+            "barcodes": [{ "id": "...", "barcode": "...", "uom": "Nos" }],
+            "uom": [
+              {
+                "id": "...",
+                "uom": "Nos",
+                "conversion_factor": 1,
+                "price": 10.5,
+                "barcode": "12345, 67890"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+  ### Error responses
+  - `400` — `last_updated_time` is not in `YYYY-MM-DD HH:MM:SS` format.
+  - `404` — no items matched the filters (`{"error": "No items found"}`), also used generically
+    for any exception raised in the try block.
+
+  ---
