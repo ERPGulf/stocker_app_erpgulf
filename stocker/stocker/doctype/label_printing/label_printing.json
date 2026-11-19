@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-08-26 14:21:20.884810",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "item_name_english",
+  "item_name_arabic",
+  "uom",
+  "barcode",
+  "price_list",
+  "update_price_from_price_list",
+  "price_to_print"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name_english",
+   "fieldtype": "Data",
+   "label": "Item Name English"
+  },
+  {
+   "fetch_from": "item_code.custom_name_arabic",
+   "fieldname": "item_name_arabic",
+   "fieldtype": "Data",
+   "label": "Item Name Arabic"
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "label": "UOM",
+   "options": "UOM"
+  },
+  {
+   "fieldname": "barcode",
+   "fieldtype": "Barcode",
+   "label": "Barcode"
+  },
+  {
+   "default": "Retail",
+   "fieldname": "price_list",
+   "fieldtype": "Link",
+   "label": "Price List",
+   "options": "Price List"
+  },
+  {
+   "fieldname": "update_price_from_price_list",
+   "fieldtype": "Button",
+   "label": "Update Price from Price list"
+  },
+  {
+   "fieldname": "price_to_print",
+   "fieldtype": "Data",
+   "label": "Price to print"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-19 15:12:38.333741",
+ "modified_by": "Administrator",
+ "module": "Stocker",
+ "name": "Label Printing",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
